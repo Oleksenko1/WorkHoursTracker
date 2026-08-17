@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { isDemoConfig } from '../firebase/config';
-import { PiggyBank, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { PiggyBank, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const AuthScreen = () => {
@@ -40,7 +39,7 @@ export const AuthScreen = () => {
       } else if (err.code === 'auth/email-already-in-use') {
         setError('Email already in use.');
       } else {
-        setError(err.message || 'Authentication failed. Please try again.');
+        setError(err.message || 'Authentication failed. Check your Firebase credentials.');
       }
     } finally {
       setSubmitting(false);
@@ -53,7 +52,7 @@ export const AuthScreen = () => {
       await signInWithGoogle();
     } catch (err) {
       console.error(err);
-      setError('Google Sign-In failed. Please try again.');
+      setError('Google Sign-In failed. Ensure domain is authorized in Firebase.');
     }
   };
 
@@ -76,13 +75,6 @@ export const AuthScreen = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Work Hours Tracker</h1>
           <p className="text-sm text-slate-400 mt-1">Clock in, earn live, and grow your piggy bank</p>
         </div>
-
-        {isDemoConfig && (
-          <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2 text-xs text-amber-300">
-            <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-            <span>Demo Mode active. Sign in with any credentials to preview!</span>
-          </div>
-        )}
 
         {error && (
           <motion.div 

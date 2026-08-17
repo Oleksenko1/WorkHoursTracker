@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Dices, X, RefreshCw, Lightbulb } from 'lucide-react';
+import { HelpCircle, X, RefreshCw, Lightbulb } from 'lucide-react';
 import { getRandomLuckyQuestion } from '../firebase/dbService';
 
 export const LuckyBlockModal = () => {
@@ -27,14 +27,14 @@ export const LuckyBlockModal = () => {
 
   return (
     <>
-      {/* Top Right Lucky Block Button */}
+      {/* Top Right Question? Button */}
       <button
         onClick={handleOpen}
         className="glass-pill px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-amber-500/20 hover:border-amber-500/40 transition-all border border-amber-500/30 text-amber-300 active:scale-95 shadow-md glow-gold"
-        title="Food for thought"
+        title="Random question from database"
       >
-        <Dices className="w-4 h-4 text-amber-400 animate-spin-slow" />
-        <span className="text-xs font-bold">Lucky Block</span>
+        <HelpCircle className="w-4 h-4 text-amber-400" />
+        <span className="text-xs font-bold">Question?</span>
       </button>
 
       {/* Question Modal Overlay */}
@@ -59,13 +59,13 @@ export const LuckyBlockModal = () => {
               </button>
 
               {/* Modal Header */}
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-md">
                   <Lightbulb className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-white">Food for Thought</h3>
-                  <p className="text-[11px] text-amber-400 font-medium">Something to ponder while working</p>
+                  <h3 className="text-base font-extrabold text-white">Question?</h3>
+                  <p className="text-[11px] text-amber-400 font-medium">Random thought from Firestore</p>
                 </div>
               </div>
 
@@ -74,7 +74,7 @@ export const LuckyBlockModal = () => {
                 {loading ? (
                   <div className="flex items-center gap-2 text-xs text-amber-400">
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Rolling dice...</span>
+                    <span>Fetching question from database...</span>
                   </div>
                 ) : (
                   <motion.p

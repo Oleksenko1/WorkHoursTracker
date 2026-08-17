@@ -136,9 +136,8 @@ export const MainScreen = () => {
 
     const amountToCollect = totalPendingPiggy;
 
-    // Reset session live piggy addition if clocked in (it moves to saved stats)
+    // Reset session live piggy addition if clocked in
     if (isClockedIn) {
-      // Reset clockInAt reference point for piggy calculations
       const now = Date.now();
       setDailyStats(prev => ({
         ...prev,
@@ -167,12 +166,12 @@ export const MainScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-y-auto selection:bg-pink-500 selection:text-white">
       {/* Background ambient lighting */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[450px] h-[350px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* App Mobile Container */}
-      <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-28 relative z-10">
+      {/* App Mobile Container - pb-36 provides scroll clearance above fixed bottom nav */}
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-36 relative z-10">
         
         {/* Top Header Bar */}
         <header className="flex items-center justify-between py-2 mb-4">
@@ -186,7 +185,7 @@ export const MainScreen = () => {
             </div>
           </div>
 
-          {/* Lucky Block Modal Trigger */}
+          {/* Question? Modal Trigger */}
           <LuckyBlockModal />
         </header>
 
@@ -237,7 +236,7 @@ export const MainScreen = () => {
               />
 
               {/* Main Thumb Clock In/Out Button */}
-              <div className="pt-2">
+              <div className="pt-2 pb-4">
                 <ClockButton
                   isClockedIn={isClockedIn}
                   onToggle={handleToggleClock}
