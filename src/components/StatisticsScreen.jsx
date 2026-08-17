@@ -1,30 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getAllDailyStats, getTodayKey } from '../firebase/dbService';
-import { Calendar as CalendarIcon, TrendingUp, Clock, DollarSign, ChevronLeft, ChevronRight, BarChart3, Award } from 'lucide-react';
+import { ManageDayModal } from './ManageDayModal';
+import { Calendar as CalendarIcon, TrendingUp, Clock, DollarSign, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const StatisticsScreen = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [statsData, setStatsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDateKey, setSelectedDateKey] = useState(getTodayKey());
-  const [avgPeriod, setAvgPeriod] = useState('7'); // '7', '30', 'all'
+  const [avgPeriod, setAvgPeriod] = useState('7');
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
-  useEffect(() => {
+  const hourlyRate = userProfile?.hourlyRate || 15.00;
+
+  const fetchStats = async () => {
     if (!user) return;
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const data = await getAllDailyStats(user.uid);
-        setStatsData(data);
-      } catch (err) {
-        console.error('Error fetching statistics:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    try {
+      const data = await getAllDailyStats(user.uid);
+      setStatsData(data);
+    } catch (err) {
+      console.error('Error fetching statistics:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStats();
   }, [user]);
 
@@ -44,7 +48,7 @@ export const StatisticsScreen = () => {
   // Compute Weekly Breakdown (Current Week Mon-Sun)
   const getWeekDays = () => {
     const now = new Date();
-    const currentDayOfWeek = now.getDay(); // 0 is Sun, 1 is Mon...
+    const currentDayOfWeek = now.getDay();
     const distanceToMon = (currentDayOfWeek + 6) % 7;
     const monday = new Date(now);
     monday.setDate(now.getDate() - distanceToMon);
@@ -162,7 +166,7 @@ export const StatisticsScreen = () => {
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${heightPercent}%` }}
-                    transition={{ duration: 0.6 }}
+                    transition={{ duration: 0.4 }}
                     className={`w-full rounded-t-xl transition-colors ${
                       isSelected
                         ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-lg glow-green'
@@ -286,20 +290,28 @@ export const StatisticsScreen = () => {
           })}
         </div>
 
-        {/* Selected Day Details Panel */}
+        {/* Selected Day Details Panel & Edit Controls */}
         <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
           <div>
-            <span className="text-slate-400 font-medium">Selected ({selectedDateKey}):</span>
+            <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+              <span>Date: <strong>{selectedDateKey}</strong></span>
+            </div>
             <div className="text-sm font-extrabold text-white font-mono">
               ${((selectedDayStats.collectedEarnings || 0) + (selectedDayStats.pendingPiggyBank || 0)).toFixed(2)}
+              <span className="text-xs text-emerald-400 font-normal ml-2">
+                ({formatHours(selectedDayStats.totalSecondsWorked || 0)})
+              </span>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-slate-400 font-medium">Time Worked:</span>
-            <div className="text-sm font-extrabold text-emerald-400 font-mono">
-              {formatHours(selectedDayStats.totalSecondsWorked || 0)}
-            </div>
-          </div>
+
+          {/* Manage Selected Day Modal */}
+          <ManageDayModal
+            uid={user?.uid}
+            dateKey={selectedDateKey}
+            currentStats={selectedDayStats}
+            onUpdate={fetchStats}
+            hourlyRate={hourlyRate}
+          />
         </div>
       </div>
     </div>

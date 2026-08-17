@@ -1,8 +1,29 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PiggyBank, Coins } from 'lucide-react';
 
-export const PiggyBankWidget = ({ pendingAmount = 0, isClockedIn = false }) => {
+export const PiggyBankWidget = ({ pendingAmount = 0, isClockedIn = false, hourlyRate = 15.00 }) => {
+  const [popups, setPopups] = useState([]);
+
+  // Calculate increment added per second
+  const perSecondIncrement = hourlyRate / 3600;
+
+  useEffect(() => {
+    if (!isClockedIn) {
+      setPopups([]);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const id = Date.now() + Math.random();
+      const popupText = `+ $${perSecondIncrement.toFixed(4)}`;
+      
+      setPopups(prev => [...prev.slice(-3), { id, text: popupText }]);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isClockedIn, perSecondIncrement]);
+
   return (
     <div className="relative group my-4">
       {/* Background Glow */}
@@ -51,18 +72,39 @@ export const PiggyBankWidget = ({ pendingAmount = 0, isClockedIn = false }) => {
           )}
         </div>
 
-        {/* Live Running Counter */}
-        <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
-          <motion.span
-            key={pendingAmount.toFixed(2)}
-            initial={isClockedIn ? { scale: 1.05 } : false}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="inline-block"
-          >
-            ${pendingAmount.toFixed(2)}
-          </motion.span>
+        {/* Live Running Counter with Right Floating Popups */}
+        <div className="relative inline-flex items-center justify-center">
+          <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight">
+            <motion.span
+              key={pendingAmount.toFixed(2)}
+              initial={isClockedIn ? { scale: 1.04 } : false}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="inline-block"
+            >
+              ${pendingAmount.toFixed(2)}
+            </motion.span>
+          </div>
+
+          {/* Floating Per-Second Increment Animation Tag */}
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none h-6 w-24 flex items-center">
+            <AnimatePresence>
+              {popups.map((p) => (
+                <motion.span
+                  key={p.id}
+                  initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                  animate={{ opacity: 1, y: -14, scale: 1 }}
+                  exit={{ opacity: 0, y: -26 }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="absolute text-xs font-bold text-emerald-400 bg-slate-900/90 border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-lg font-mono whitespace-nowrap glow-green"
+                >
+                  {p.text}
+                </motion.span>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
+
         <p className="text-[11px] text-slate-400 mt-1">Accumulating money ready to be collected</p>
       </div>
     </div>

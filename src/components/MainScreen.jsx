@@ -12,6 +12,7 @@ import { PiggyBankWidget } from './PiggyBankWidget';
 import { CollectButton } from './CollectButton';
 import { ClockButton } from './ClockButton';
 import { LuckyBlockModal } from './LuckyBlockModal';
+import { ManageDayModal } from './ManageDayModal';
 import { StatisticsScreen } from './StatisticsScreen';
 import { Navbar } from './Navbar';
 import { PiggyBank, Clock, Sparkles } from 'lucide-react';
@@ -38,12 +39,13 @@ export const MainScreen = () => {
 
   const hourlyRate = userProfile?.hourlyRate || 15.00;
   const isClockedIn = Boolean(dailyStats.activeClockInAt);
+  const todayKey = getTodayKey();
 
-  // Fetch stats on load
+  // Fetch stats on load or update
   const loadStats = async () => {
     if (!user) return;
     try {
-      const stats = await getDailyStats(user.uid);
+      const stats = await getDailyStats(user.uid, todayKey);
       setDailyStats(stats);
     } catch (err) {
       console.error('Error loading daily stats:', err);
@@ -136,7 +138,6 @@ export const MainScreen = () => {
 
     const amountToCollect = totalPendingPiggy;
 
-    // Reset session live piggy addition if clocked in
     if (isClockedIn) {
       const now = Date.now();
       setDailyStats(prev => ({
@@ -166,12 +167,12 @@ export const MainScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-y-auto selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-pink-500 selection:text-white">
       {/* Background ambient lighting */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[450px] h-[350px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* App Mobile Container - pb-36 provides scroll clearance above fixed bottom nav */}
-      <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-36 relative z-10">
+      {/* App Mobile Container - pb-24 for clean mobile spacing */}
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-24 relative z-10">
         
         {/* Top Header Bar */}
         <header className="flex items-center justify-between py-2 mb-4">
@@ -189,20 +190,27 @@ export const MainScreen = () => {
           <LuckyBlockModal />
         </header>
 
-        {/* Tab Router Content */}
+        {/* Tab Router Content - Silky smooth lightweight opacity transition */}
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
             <motion.main
               key="home"
-              initial={{ opacity: 0, x: -15 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="flex-1 flex flex-col space-y-4"
             >
-              {/* Hourly Rate Editor Bar */}
-              <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-2xl px-4 py-2.5">
-                <span className="text-xs font-semibold text-slate-400">Current Rate</span>
+              {/* Hourly Rate & Manage Data Bar */}
+              <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-2xl px-3.5 py-2">
                 <HourlyRateModal />
+                <ManageDayModal
+                  uid={user?.uid}
+                  dateKey={todayKey}
+                  currentStats={dailyStats}
+                  onUpdate={loadStats}
+                  hourlyRate={hourlyRate}
+                />
               </div>
 
               {/* Big Earnings Display Card */}
@@ -227,6 +235,7 @@ export const MainScreen = () => {
               <PiggyBankWidget
                 pendingAmount={totalPendingPiggy}
                 isClockedIn={isClockedIn}
+                hourlyRate={hourlyRate}
               />
 
               {/* Collect Button */}
@@ -236,7 +245,7 @@ export const MainScreen = () => {
               />
 
               {/* Main Thumb Clock In/Out Button */}
-              <div className="pt-2 pb-4">
+              <div>
                 <ClockButton
                   isClockedIn={isClockedIn}
                   onToggle={handleToggleClock}
@@ -246,9 +255,10 @@ export const MainScreen = () => {
           ) : (
             <motion.main
               key="stats"
-              initial={{ opacity: 0, x: 15 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="flex-1"
             >
               <StatisticsScreen />

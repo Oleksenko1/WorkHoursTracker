@@ -6,6 +6,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from './config';
@@ -139,6 +140,34 @@ export const collectPiggyBank = async (uid, amountToCollect) => {
   return { newCollected, newPending, newTotalEarnings };
 };
 
+// Manual Adjust Data (Add/Remove Worked Time & Earnings)
+export const adjustDailyStats = async (uid, dateKey, totalSeconds, collectedEarnings) => {
+  const seconds = Math.max(0, parseInt(totalSeconds, 10) || 0);
+  const earnings = Math.max(0, parseFloat(collectedEarnings) || 0);
+
+  const statsRef = doc(db, `users/${uid}/dailyStats`, dateKey);
+  await setDoc(statsRef, {
+    totalSecondsWorked: seconds,
+    collectedEarnings: earnings,
+    totalEarnings: earnings,
+    lastUpdatedAt: serverTimestamp()
+  }, { merge: true });
+};
+
+// Clear All Data for a Specific Day
+export const clearDailyStats = async (uid, dateKey) => {
+  const statsRef = doc(db, `users/${uid}/dailyStats`, dateKey);
+  await setDoc(statsRef, {
+    totalSecondsWorked: 0,
+    collectedEarnings: 0,
+    pendingPiggyBank: 0,
+    totalEarnings: 0,
+    activeClockInAt: null,
+    currentSessionId: null,
+    lastUpdatedAt: serverTimestamp()
+  }, { merge: true });
+};
+
 // 4. Fetch All Daily Stats for Statistics Screen
 export const getAllDailyStats = async (uid) => {
   const statsCol = collection(db, `users/${uid}/dailyStats`);
@@ -172,7 +201,6 @@ export const getRandomLuckyQuestion = async () => {
     console.warn('Firestore luckyQuestions query warning:', err);
   }
 
-  // Fallback if Firestore collection not yet seeded
   const randomIndex = Math.floor(Math.random() * DEFAULT_QUESTIONS.length);
   return DEFAULT_QUESTIONS[randomIndex];
 };
