@@ -9,21 +9,70 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+      html, body {
+        background-color: #020617;
+        color: #f8fafc;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+      }
+      .fallback-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        box-sizing: border-box;
+      }
+      .fallback-card {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        max-width: 24rem;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+      .btn-reload {
+        margin-top: 1.25rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(to right, #22c55e, #14b8a6);
+        color: #020617;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border: none;
+        border-radius: 0.75rem;
+        cursor: pointer;
+      }
+    </style>
+
     <script type="text/javascript">
-      // Single Page Apps for GitHub Pages
-      // Redirect 404 back to root index
-      var segmentCount = 1;
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
-        l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // SPA redirect script for GitHub Pages
+      (function() {
+        var segmentCount = 1;
+        var l = window.location;
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+          l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
+          l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+          (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
+      })();
     </script>
   </head>
-  <body class="h-full font-sans antialiased bg-slate-950 text-slate-100">
-    <div id="root" class="h-full"></div>
+  <body>
+    <div id="root" class="h-full">
+      <div class="fallback-container">
+        <div class="fallback-card">
+          <h2 style="font-size: 1.125rem; font-weight: 700; margin: 0 0 0.5rem 0; color: #ffffff;">Redirecting...</h2>
+          <p style="font-size: 0.8125rem; color: #94a3b8; margin: 0;">Loading application page...</p>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
