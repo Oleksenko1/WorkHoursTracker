@@ -14,7 +14,8 @@ const firebaseConfig = {
   projectId: projectId || "placeholder",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "placeholder.appspot.com",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "00000000000",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:00000000000:web:00000000000000"
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:00000000000:web:00000000000000",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase safely
