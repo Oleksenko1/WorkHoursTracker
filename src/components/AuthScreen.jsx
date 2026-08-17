@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { PiggyBank, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { hasFirebaseConfig } from '../firebase/config';
+import { PiggyBank, Mail, Lock, User, ArrowRight, AlertCircle, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const AuthScreen = () => {
@@ -15,6 +16,11 @@ export const AuthScreen = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!hasFirebaseConfig) {
+      setError('Firebase credentials missing. Please add VITE_FIREBASE_API_KEY to your .env or GitHub Action Secrets.');
+      return;
+    }
 
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address.');
@@ -38,6 +44,8 @@ export const AuthScreen = () => {
         setError('Invalid email or password.');
       } else if (err.code === 'auth/email-already-in-use') {
         setError('Email already in use.');
+      } else if (err.code === 'auth/invalid-api-key') {
+        setError('Invalid Firebase API key. Check your .env file or GitHub Secrets.');
       } else {
         setError(err.message || 'Authentication failed. Check your Firebase credentials.');
       }
@@ -48,11 +56,19 @@ export const AuthScreen = () => {
 
   const handleGoogle = async () => {
     setError('');
+    if (!hasFirebaseConfig) {
+      setError('Firebase credentials missing. Please add GitHub Repository Secrets.');
+      return;
+    }
     try {
       await signInWithGoogle();
     } catch (err) {
       console.error(err);
-      setError('Google Sign-In failed. Ensure domain is authorized in Firebase.');
+      if (err.code === 'auth/unauthorized-domain') {
+        setError('Unauthorized domain! Add your GitHub Pages URL in Firebase Console -> Auth -> Authorized Domains.');
+      } else {
+        setError(err.message || 'Google Sign-In failed. Ensure domain is authorized in Firebase.');
+      }
     }
   };
 
@@ -75,6 +91,18 @@ export const AuthScreen = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Work Hours Tracker</h1>
           <p className="text-sm text-slate-400 mt-1">Clock in, earn live, and grow your piggy bank</p>
         </div>
+
+        {!hasFirebaseConfig && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col gap-1 text-xs text-amber-300">
+            <div className="flex items-center gap-2 font-bold text-amber-400">
+              <KeyRound className="w-4 h-4 shrink-0" />
+              <span>Firebase Keys Not Detected</span>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              If running on <strong>GitHub Pages</strong>, add your Firebase keys under <strong>GitHub Repo Settings → Secrets → Actions</strong>.
+            </p>
+          </div>
+        )}
 
         {error && (
           <motion.div 
