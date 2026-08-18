@@ -15,12 +15,12 @@ export const Navbar = ({ activeTab, setActiveTab }) => {
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 p-3 max-w-md mx-auto pointer-events-none">
-        <div className="glass-card bg-slate-900/90 border border-slate-800 rounded-3xl p-1.5 shadow-2xl flex items-center justify-around pointer-events-auto backdrop-blur-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-1.5 shadow-2xl flex items-center justify-around pointer-events-auto">
           <button
             onClick={() => setActiveTab('home')}
             className={`flex-1 py-2.5 px-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
               activeTab === 'home'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 font-bold'
+                ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30 font-bold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -32,7 +32,7 @@ export const Navbar = ({ activeTab, setActiveTab }) => {
             onClick={() => setActiveTab('stats')}
             className={`flex-1 py-2.5 px-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
               activeTab === 'stats'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 font-bold'
+                ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30 font-bold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -54,7 +54,7 @@ export const Navbar = ({ activeTab, setActiveTab }) => {
       {/* Exit Confirmation Modal */}
       <AnimatePresence>
         {showConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85">
             <motion.div
               initial={{ opacity: 0, scale: 0.85, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -87,7 +87,7 @@ export const Navbar = ({ activeTab, setActiveTab }) => {
                 <button
                   type="button"
                   onClick={handleConfirmLogOut}
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-lg glow-pink flex items-center justify-center gap-1 transition-all active:scale-95"
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-lg flex items-center justify-center gap-1 transition-all active:scale-95"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Exit</span>

@@ -15,7 +15,7 @@ import { LuckyBlockModal } from './LuckyBlockModal';
 import { ManageDayModal } from './ManageDayModal';
 import { StatisticsScreen } from './StatisticsScreen';
 import { Navbar } from './Navbar';
-import { PiggyBank, Clock, Sparkles } from 'lucide-react';
+import { PiggyBank, Clock, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const MainScreen = () => {
@@ -33,6 +33,14 @@ export const MainScreen = () => {
   });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+
+  // Coin Animation State
+  const [flyingCoins, setFlyingCoins] = useState([]);
+  const [earnedBounce, setEarnedBounce] = useState(false);
+
+  // Target Refs for Animation
+  const earnedCardRef = useRef(null);
+  const piggyRef = useRef(null);
 
   // Live Timer Counters
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -64,7 +72,7 @@ export const MainScreen = () => {
   useEffect(() => {
     const handleSync = async () => {
       if (!user) return;
-      setActionLoading('Syncing data with server...');
+      setActionLoading('sync');
       try {
         await loadStats();
       } catch (err) {
@@ -121,6 +129,56 @@ export const MainScreen = () => {
     };
   }, [isClockedIn, dailyStats.activeClockInAt, dailyStats.lastCollectedAt, hourlyRate]);
 
+  // Trigger Juicy & Dynamic Flying Coins Animation
+  const triggerCoinAnimation = () => {
+    let startX = window.innerWidth / 2;
+    let startY = window.innerHeight * 0.6;
+    let endX = window.innerWidth / 2;
+    let endY = window.innerHeight * 0.25;
+
+    if (piggyRef.current) {
+      const rect = piggyRef.current.getBoundingClientRect();
+      startX = rect.left + rect.width / 2;
+      startY = rect.top + rect.height / 2;
+    }
+
+    if (earnedCardRef.current) {
+      const rect = earnedCardRef.current.getBoundingClientRect();
+      endX = rect.left + rect.width / 2;
+      endY = rect.top + rect.height / 2;
+    }
+
+    // Generate 10 flying coins with randomized arc offsets & staggered timing
+    const newCoins = Array.from({ length: 10 }).map((_, idx) => {
+      const spreadX = (Math.random() - 0.5) * 100;
+      const burstY = -(25 + Math.random() * 45);
+      return {
+        id: Date.now() + idx + Math.random(),
+        delay: idx * 0.04,
+        duration: 0.55 + Math.random() * 0.15,
+        startX: startX + spreadX,
+        startY: startY,
+        midX: startX + spreadX * 1.4,
+        midY: startY + burstY,
+        endX: endX,
+        endY: endY
+      };
+    });
+
+    setFlyingCoins(newCoins);
+
+    // Trigger bounce on Earned Today display when coins land
+    setTimeout(() => {
+      setEarnedBounce(true);
+      setTimeout(() => setEarnedBounce(false), 300);
+    }, 450);
+
+    // Clean up coins after animation finishes
+    setTimeout(() => {
+      setFlyingCoins([]);
+    }, 1100);
+  };
+
   // Total Piggy Bank pending = base saved pending + current session live uncollected
   const totalPendingPiggy = (dailyStats.pendingPiggyBank || 0) + sessionPendingPiggy;
 
@@ -140,7 +198,7 @@ export const MainScreen = () => {
     if (!user || actionLoading) return;
 
     if (!isClockedIn) {
-      setActionLoading('Clocking in...');
+      setActionLoading('clock');
       try {
         const { sessionId, clockInAt } = await startSession(user.uid, hourlyRate);
         setDailyStats(prev => ({
@@ -155,7 +213,7 @@ export const MainScreen = () => {
         setActionLoading(null);
       }
     } else {
-      setActionLoading('Clocking out...');
+      setActionLoading('clock');
       try {
         const uncollectedSessionEarnings = sessionPendingPiggy;
         const { updatedPendingPiggy } = await stopSession(
@@ -189,7 +247,7 @@ export const MainScreen = () => {
     if (!user || totalPendingPiggy <= 0 || actionLoading) return;
 
     const amountToCollect = totalPendingPiggy;
-    setActionLoading('Collecting money...');
+    setActionLoading('collect');
 
     try {
       const { newCollected, newPending, lastCollectedAt } = await collectPiggyBank(user.uid, amountToCollect, isClockedIn);
@@ -200,11 +258,27 @@ export const MainScreen = () => {
         ...(isClockedIn && lastCollectedAt ? { lastCollectedAt } : {})
       }));
       setSessionPendingPiggy(0);
+
+      // Trigger juicy flying coins animation after collect & sync completes
+      triggerCoinAnimation();
     } catch (err) {
       console.error('Error collecting piggy bank:', err);
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const getActionText = () => {
+    if (actionLoading === 'clock') {
+      return isClockedIn ? 'Clocking out...' : 'Clocking in...';
+    }
+    if (actionLoading === 'collect') {
+      return 'Collecting earnings...';
+    }
+    if (actionLoading === 'sync') {
+      return 'Syncing with server...';
+    }
+    return actionLoading || 'Loading...';
   };
 
   if (loading) {
@@ -218,20 +292,40 @@ export const MainScreen = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-pink-500 selection:text-white">
-      {/* Syncing / Action Overlay Popup */}
-      {actionLoading && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
-          <div className="w-12 h-12 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin mb-3"></div>
-          <p className="text-sm font-bold text-white tracking-wide">{actionLoading}</p>
-          <p className="text-xs text-slate-400 mt-1">Please wait while server updates...</p>
-        </div>
-      )}
+      {/* Dynamic Flying Coins Overlay */}
+      <AnimatePresence>
+        {flyingCoins.map(coin => (
+          <motion.div
+            key={coin.id}
+            initial={{
+              x: coin.startX,
+              y: coin.startY,
+              scale: 0.6,
+              opacity: 1
+            }}
+            animate={{
+              x: [coin.startX, coin.midX, coin.endX],
+              y: [coin.startY, coin.midY, coin.endY],
+              scale: [0.6, 1.25, 0.3],
+              opacity: [1, 1, 0]
+            }}
+            transition={{
+              duration: coin.duration,
+              delay: coin.delay,
+              ease: [0.2, 0.8, 0.2, 1]
+            }}
+            className="fixed top-0 left-0 z-50 pointer-events-none w-7 h-7 rounded-full bg-amber-400 border border-amber-200 text-slate-950 font-bold text-xs flex items-center justify-center shadow"
+          >
+            $
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* App Mobile Container */}
-      <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-24 relative z-10">
+      <div className={`w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-24 relative z-10 transition-opacity ${actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}`}>
         
         {/* Top Header Bar */}
-        <header className="flex items-center justify-between py-2 mb-4">
+        <header className="flex items-center justify-between py-2 mb-2">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md">
               <PiggyBank className="w-5 h-5" />
@@ -246,6 +340,21 @@ export const MainScreen = () => {
           <LuckyBlockModal />
         </header>
 
+        {/* Top Loading Status Banner */}
+        <AnimatePresence>
+          {actionLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-center justify-center gap-2 bg-slate-900 border border-emerald-500/40 rounded-full px-3.5 py-1.5 mb-3 shadow-md mx-auto w-fit"
+            >
+              <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+              <span className="text-xs font-bold text-white font-mono tracking-wide">{getActionText()}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Tab Router Content */}
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
@@ -258,7 +367,7 @@ export const MainScreen = () => {
               className="flex-1 flex flex-col space-y-4"
             >
               {/* Hourly Rate & Manage Data Bar */}
-              <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-2xl px-3.5 py-2">
+              <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-3.5 py-2">
                 <HourlyRateModal />
                 <ManageDayModal
                   uid={user?.uid}
@@ -270,34 +379,41 @@ export const MainScreen = () => {
               </div>
 
               {/* Big Earnings Display Card */}
-              <div className="glass-card rounded-3xl p-6 text-center border border-emerald-500/30 shadow-2xl relative overflow-hidden">
+              <div ref={earnedCardRef} className="glass-card rounded-3xl p-6 text-center border border-emerald-500/30 shadow-2xl relative overflow-hidden">
                 <div className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Earned Today</span>
                 </div>
                 
-                <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-emerald-300 font-mono tracking-tight my-1">
+                <motion.div
+                  animate={earnedBounce ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono tracking-tight my-1"
+                >
                   ${dailyStats.collectedEarnings.toFixed(2)}
-                </div>
+                </motion.div>
 
                 {/* Worked Time Today */}
-                <div className="inline-flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-full border border-slate-800 text-xs font-mono text-slate-300 mt-2 shadow-inner">
+                <div className="inline-flex items-center gap-2 bg-slate-950 px-3.5 py-1.5 rounded-full border border-slate-800 text-xs font-mono text-slate-300 mt-2 shadow-inner">
                   <Clock className={`w-3.5 h-3.5 ${isClockedIn ? 'text-emerald-400' : 'text-slate-500'}`} />
                   <span>Time Today: <strong className="text-white font-bold">{formatTime(totalWorkedSeconds)}</strong></span>
                 </div>
               </div>
 
               {/* Piggy Bank Running Counter */}
-              <PiggyBankWidget
-                pendingAmount={totalPendingPiggy}
-                isClockedIn={isClockedIn}
-                hourlyRate={hourlyRate}
-              />
+              <div ref={piggyRef}>
+                <PiggyBankWidget
+                  pendingAmount={totalPendingPiggy}
+                  isClockedIn={isClockedIn}
+                  hourlyRate={hourlyRate}
+                />
+              </div>
 
               {/* Collect Button */}
               <CollectButton
                 onCollect={handleCollect}
                 disabled={Boolean(actionLoading)}
+                loading={actionLoading === 'collect'}
                 pendingAmount={totalPendingPiggy}
               />
 
@@ -307,6 +423,7 @@ export const MainScreen = () => {
                   isClockedIn={isClockedIn}
                   onToggle={handleToggleClock}
                   disabled={Boolean(actionLoading)}
+                  loading={actionLoading === 'clock'}
                 />
               </div>
             </motion.main>
@@ -326,7 +443,9 @@ export const MainScreen = () => {
       </div>
 
       {/* Bottom Mobile Navigation */}
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className={actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}>
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
     </div>
   );
 };

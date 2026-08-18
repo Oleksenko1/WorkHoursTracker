@@ -47,7 +47,7 @@ export const HourlyRateModal = () => {
       {/* Edit Rate Modal */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -91,7 +91,7 @@ export const HourlyRateModal = () => {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg glow-green flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg flex items-center justify-center gap-1 transition-all disabled:opacity-50"
                   >
                     <Check className="w-4 h-4" />
                     <span>Save</span>
