@@ -17,6 +17,7 @@ import { StatisticsScreen } from './StatisticsScreen';
 import { Navbar } from './Navbar';
 import { PiggyBank, Clock, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
 export const MainScreen = () => {
   const { user, userProfile } = useAuth();
@@ -129,8 +130,8 @@ export const MainScreen = () => {
     };
   }, [isClockedIn, dailyStats.activeClockInAt, dailyStats.lastCollectedAt, hourlyRate]);
 
-  // Trigger Juicy & Dynamic Flying Coins Animation
-  const triggerCoinAnimation = () => {
+  // Trigger Juicy & Dynamic Flying Coins Animation (Scales count & duration by hours worked/saved)
+  const triggerCoinAnimation = (amountCollected = 0) => {
     let startX = window.innerWidth / 2;
     let startY = window.innerHeight * 0.6;
     let endX = window.innerWidth / 2;
@@ -148,35 +149,66 @@ export const MainScreen = () => {
       endY = rect.top + rect.height / 2;
     }
 
-    // Generate 10 flying coins with randomized arc offsets & staggered timing
-    const newCoins = Array.from({ length: 10 }).map((_, idx) => {
-      const spreadX = (Math.random() - 0.5) * 100;
-      const burstY = -(25 + Math.random() * 45);
+    // Dynamic coin count based on saved money / worked hours (Min 10, Max 45 coins)
+    const hoursSaved = amountCollected > 0 ? amountCollected / hourlyRate : 0.5;
+    const coinCount = Math.min(45, Math.max(10, Math.floor(hoursSaved * 12) + 8));
+
+    // Generate flying coins with randomized arc offsets, rotation & staggered timing
+    const newCoins = Array.from({ length: coinCount }).map((_, idx) => {
+      const spreadX = (Math.random() - 0.5) * 140;
+      const burstY = -(35 + Math.random() * 65);
+      const rotateDeg = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 720);
       return {
         id: Date.now() + idx + Math.random(),
-        delay: idx * 0.04,
-        duration: 0.55 + Math.random() * 0.15,
-        startX: startX + spreadX,
+        delay: idx * 0.045,
+        duration: 0.85 + Math.random() * 0.35,
+        startX: startX + (Math.random() - 0.5) * 20,
         startY: startY,
-        midX: startX + spreadX * 1.4,
+        midX: startX + spreadX * 1.5,
         midY: startY + burstY,
-        endX: endX,
-        endY: endY
+        endX: endX + (Math.random() - 0.5) * 20,
+        endY: endY,
+        rotateDeg: rotateDeg
       };
     });
 
     setFlyingCoins(newCoins);
 
-    // Trigger bounce on Earned Today display when coins land
+    // Initial coin pickup confetti burst at Piggy Bank location
+    confetti({
+      particleCount: Math.min(50, coinCount * 1.5),
+      spread: 60,
+      origin: { x: startX / window.innerWidth, y: startY / window.innerHeight },
+      colors: ['#fbbf24', '#f59e0b', '#d97706', '#22c55e', '#16a34a'],
+      shapes: ['circle', 'square'],
+      scalar: 1.1
+    });
+
+    // Multi-stage pulse bounce & landing confetti burst on Earned Today display as coins cascade in
+    const totalAnimTimeMs = Math.floor((coinCount * 0.045 + 1.1) * 1000);
+
+    setTimeout(() => {
+      setEarnedBounce(true);
+      confetti({
+        particleCount: Math.min(45, coinCount * 1.2),
+        spread: 70,
+        origin: { x: endX / window.innerWidth, y: endY / window.innerHeight },
+        colors: ['#fbbf24', '#f59e0b', '#34d399', '#10b981'],
+        shapes: ['circle'],
+        scalar: 1.0
+      });
+      setTimeout(() => setEarnedBounce(false), 250);
+    }, 600);
+
     setTimeout(() => {
       setEarnedBounce(true);
       setTimeout(() => setEarnedBounce(false), 300);
-    }, 450);
+    }, Math.floor(totalAnimTimeMs * 0.6));
 
-    // Clean up coins after animation finishes
+    // Clean up coins after full animation sequence completes
     setTimeout(() => {
       setFlyingCoins([]);
-    }, 1100);
+    }, totalAnimTimeMs);
   };
 
   // Total Piggy Bank pending = base saved pending + current session live uncollected
@@ -259,8 +291,8 @@ export const MainScreen = () => {
       }));
       setSessionPendingPiggy(0);
 
-      // Trigger juicy flying coins animation after collect & sync completes
-      triggerCoinAnimation();
+      // Trigger juicy flying coins animation (scaled to amount collected) after sync completes
+      triggerCoinAnimation(amountToCollect);
     } catch (err) {
       console.error('Error collecting piggy bank:', err);
     } finally {
@@ -300,21 +332,23 @@ export const MainScreen = () => {
             initial={{
               x: coin.startX,
               y: coin.startY,
-              scale: 0.6,
+              scale: 0.5,
+              rotate: 0,
               opacity: 1
             }}
             animate={{
               x: [coin.startX, coin.midX, coin.endX],
               y: [coin.startY, coin.midY, coin.endY],
-              scale: [0.6, 1.25, 0.3],
+              scale: [0.5, 1.35, 0.25],
+              rotate: [0, coin.rotateDeg, coin.rotateDeg * 1.5],
               opacity: [1, 1, 0]
             }}
             transition={{
               duration: coin.duration,
               delay: coin.delay,
-              ease: [0.2, 0.8, 0.2, 1]
+              ease: [0.15, 0.85, 0.35, 1]
             }}
-            className="fixed top-0 left-0 z-50 pointer-events-none w-7 h-7 rounded-full bg-amber-400 border border-amber-200 text-slate-950 font-bold text-xs flex items-center justify-center shadow"
+            className="fixed top-0 left-0 z-50 pointer-events-none w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border border-amber-200 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg"
           >
             $
           </motion.div>
@@ -325,7 +359,7 @@ export const MainScreen = () => {
       <div className={`w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-24 relative z-10 transition-opacity ${actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}`}>
         
         {/* Top Header Bar */}
-        <header className="flex items-center justify-between py-2 mb-2">
+        <header className="flex items-center justify-between py-2 mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md">
               <PiggyBank className="w-5 h-5" />
@@ -339,21 +373,6 @@ export const MainScreen = () => {
           {/* Question? Modal Trigger */}
           <LuckyBlockModal />
         </header>
-
-        {/* Top Loading Status Banner */}
-        <AnimatePresence>
-          {actionLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="flex items-center justify-center gap-2 bg-slate-900 border border-emerald-500/40 rounded-full px-3.5 py-1.5 mb-3 shadow-md mx-auto w-fit"
-            >
-              <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-              <span className="text-xs font-bold text-white font-mono tracking-wide">{getActionText()}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Tab Router Content */}
         <AnimatePresence mode="wait">
@@ -441,6 +460,22 @@ export const MainScreen = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Floating Bottom Loading Status Pill (Above Navigation Panel) */}
+      <AnimatePresence>
+        {actionLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-2.5 bg-slate-900 border border-emerald-500/40 rounded-full px-4 py-2 shadow-2xl pointer-events-none whitespace-nowrap max-w-[90vw]"
+          >
+            <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
+            <span className="text-xs font-bold text-white font-mono tracking-wide">{getActionText()}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Mobile Navigation */}
       <div className={actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}>
