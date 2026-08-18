@@ -339,13 +339,14 @@ export const MainScreen = () => {
             animate={{
               x: [coin.startX, coin.midX, coin.endX],
               y: [coin.startY, coin.midY, coin.endY],
-              scale: [0.5, 1.35, 0.25],
+              scale: [0.5, 1.35, 1.0, 0.25],
               rotate: [0, coin.rotateDeg, coin.rotateDeg * 1.5],
-              opacity: [1, 1, 0]
+              opacity: [1, 1, 0.1, 0]
             }}
             transition={{
               duration: coin.duration,
               delay: coin.delay,
+              times: [0, 0.67, 0.96, 1],
               ease: [0.15, 0.85, 0.35, 1]
             }}
             className="fixed top-0 left-0 z-50 pointer-events-none w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border border-amber-200 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg"
@@ -460,22 +461,6 @@ export const MainScreen = () => {
           )}
         </AnimatePresence>
       </div>
-
-      {/* Floating Bottom Loading Status Pill (Above Navigation Panel) */}
-      <AnimatePresence>
-        {actionLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 15, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 15, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-2.5 bg-slate-900 border border-emerald-500/40 rounded-full px-4 py-2 shadow-2xl pointer-events-none whitespace-nowrap max-w-[90vw]"
-          >
-            <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
-            <span className="text-xs font-bold text-white font-mono tracking-wide">{getActionText()}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Bottom Mobile Navigation */}
       <div className={actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}>
