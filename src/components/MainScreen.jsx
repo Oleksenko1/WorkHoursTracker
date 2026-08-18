@@ -332,22 +332,21 @@ export const MainScreen = () => {
             initial={{
               x: coin.startX,
               y: coin.startY,
-              scale: 0.5,
+              scale: 0.6,
               rotate: 0,
               opacity: 1
             }}
             animate={{
               x: [coin.startX, coin.midX, coin.endX],
               y: [coin.startY, coin.midY, coin.endY],
-              scale: [0.5, 1.35, 1.0, 0.25],
+              scale: [0.6, 1.2, 0],
               rotate: [0, coin.rotateDeg, coin.rotateDeg * 1.5],
-              opacity: [1, 1, 0.1, 0]
+              opacity: 1
             }}
             transition={{
               duration: coin.duration,
               delay: coin.delay,
-              times: [0, 0.67, 0.96, 1],
-              ease: [0.15, 0.85, 0.35, 1]
+              ease: [0.61, 1, 0.88, 1]
             }}
             className="fixed top-0 left-0 z-50 pointer-events-none w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border border-amber-200 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg"
           >
