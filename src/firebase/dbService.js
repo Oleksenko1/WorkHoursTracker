@@ -86,6 +86,7 @@ export const startSession = async (uid, hourlyRate) => {
   const statsRef = doc(db, `users/${uid}/dailyStats`, dateKey);
   await setDoc(statsRef, {
     activeClockInAt: clockInAt,
+    lastCollectedAt: clockInAt,
     currentSessionId: newSessionRef.id,
     lastUpdatedAt: serverTimestamp()
   }, { merge: true });
@@ -93,7 +94,7 @@ export const startSession = async (uid, hourlyRate) => {
   return { sessionId: newSessionRef.id, clockInAt };
 };
 
-export const stopSession = async (uid, activeSessionId, clockInAt, hourlyRate, pendingPiggy) => {
+export const stopSession = async (uid, activeSessionId, clockInAt, hourlyRate, uncollectedSessionEarnings = 0) => {
   const clockOutAt = Date.now();
   const durationSeconds = Math.max(0, Math.floor((clockOutAt - clockInAt) / 1000));
   const sessionEarnings = parseFloat(((durationSeconds / 3600) * hourlyRate).toFixed(4));
@@ -110,13 +111,14 @@ export const stopSession = async (uid, activeSessionId, clockInAt, hourlyRate, p
 
   const stats = await getDailyStats(uid, dateKey);
   const newTotalSeconds = (stats.totalSecondsWorked || 0) + durationSeconds;
-  const newPendingPiggy = parseFloat(((stats.pendingPiggyBank || 0) + sessionEarnings).toFixed(2));
+  const newPendingPiggy = parseFloat(((stats.pendingPiggyBank || 0) + uncollectedSessionEarnings).toFixed(2));
 
   const statsRef = doc(db, `users/${uid}/dailyStats`, dateKey);
   await setDoc(statsRef, {
     totalSecondsWorked: newTotalSeconds,
     pendingPiggyBank: newPendingPiggy,
     activeClockInAt: null,
+    lastCollectedAt: null,
     currentSessionId: null,
     lastUpdatedAt: serverTimestamp()
   }, { merge: true });
@@ -124,7 +126,7 @@ export const stopSession = async (uid, activeSessionId, clockInAt, hourlyRate, p
   return { durationSeconds, sessionEarnings, updatedPendingPiggy: newPendingPiggy };
 };
 
-export const collectPiggyBank = async (uid, amountToCollect) => {
+export const collectPiggyBank = async (uid, amountToCollect, isClockedIn = false) => {
   const dateKey = getTodayKey();
   const stats = await getDailyStats(uid, dateKey);
 
@@ -132,12 +134,21 @@ export const collectPiggyBank = async (uid, amountToCollect) => {
   const newPending = 0;
   const newTotalEarnings = parseFloat(((stats.totalEarnings || 0) + amountToCollect).toFixed(2));
 
-  stats.collectedEarnings = newCollected;
-  stats.pendingPiggyBank = newPending;
-  stats.totalEarnings = newTotalEarnings;
+  const updateData = {
+    collectedEarnings: newCollected,
+    pendingPiggyBank: newPending,
+    totalEarnings: newTotalEarnings,
+    lastUpdatedAt: serverTimestamp()
+  };
 
-  await saveDailyStats(uid, dateKey, stats);
-  return { newCollected, newPending, newTotalEarnings };
+  if (isClockedIn) {
+    updateData.lastCollectedAt = Date.now();
+  }
+
+  const statsRef = doc(db, `users/${uid}/dailyStats`, dateKey);
+  await setDoc(statsRef, updateData, { merge: true });
+
+  return { newCollected, newPending, newTotalEarnings, lastCollectedAt: updateData.lastCollectedAt };
 };
 
 // Manual Adjust Data (Add/Remove Worked Time & Earnings)

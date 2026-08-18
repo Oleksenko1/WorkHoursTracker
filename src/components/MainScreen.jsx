@@ -28,9 +28,11 @@ export const MainScreen = () => {
     collectedEarnings: 0,
     pendingPiggyBank: 0,
     activeClockInAt: null,
+    lastCollectedAt: null,
     currentSessionId: null
   });
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
 
   // Live Timer Counters
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -58,6 +60,39 @@ export const MainScreen = () => {
     loadStats();
   }, [user]);
 
+  // Tab switch & browser focus sync listener
+  useEffect(() => {
+    const handleSync = async () => {
+      if (!user) return;
+      setActionLoading('Syncing data with server...');
+      try {
+        await loadStats();
+      } catch (err) {
+        console.error('Error syncing server stats:', err);
+      } finally {
+        setActionLoading(null);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleSync();
+      }
+    };
+
+    const onFocus = () => {
+      handleSync();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user]);
+
   // Live ticker effect while clocked in
   useEffect(() => {
     if (isClockedIn && dailyStats.activeClockInAt) {
@@ -66,8 +101,10 @@ export const MainScreen = () => {
         const elapsedSec = Math.max(0, Math.floor((now - dailyStats.activeClockInAt) / 1000));
         setSessionSeconds(elapsedSec);
         
-        // Calculate live piggy bank earnings for this active session
-        const liveEarned = (elapsedSec / 3600) * hourlyRate;
+        // Calculate live piggy bank earnings from last collection timestamp
+        const startForPiggy = dailyStats.lastCollectedAt || dailyStats.activeClockInAt;
+        const piggySec = Math.max(0, Math.floor((now - startForPiggy) / 1000));
+        const liveEarned = (piggySec / 3600) * hourlyRate;
         setSessionPendingPiggy(liveEarned);
       };
 
@@ -82,7 +119,7 @@ export const MainScreen = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isClockedIn, dailyStats.activeClockInAt, hourlyRate]);
+  }, [isClockedIn, dailyStats.activeClockInAt, dailyStats.lastCollectedAt, hourlyRate]);
 
   // Total Piggy Bank pending = base saved pending + current session live uncollected
   const totalPendingPiggy = (dailyStats.pendingPiggyBank || 0) + sessionPendingPiggy;
@@ -100,60 +137,73 @@ export const MainScreen = () => {
 
   // Clock In / Clock Out Handler
   const handleToggleClock = async () => {
-    if (!user) return;
+    if (!user || actionLoading) return;
 
     if (!isClockedIn) {
-      // Clock In
-      const { sessionId, clockInAt } = await startSession(user.uid, hourlyRate);
-      setDailyStats(prev => ({
-        ...prev,
-        activeClockInAt: clockInAt,
-        currentSessionId: sessionId
-      }));
+      setActionLoading('Clocking in...');
+      try {
+        const { sessionId, clockInAt } = await startSession(user.uid, hourlyRate);
+        setDailyStats(prev => ({
+          ...prev,
+          activeClockInAt: clockInAt,
+          lastCollectedAt: clockInAt,
+          currentSessionId: sessionId
+        }));
+      } catch (err) {
+        console.error('Error clocking in:', err);
+      } finally {
+        setActionLoading(null);
+      }
     } else {
-      // Clock Out
-      const { updatedPendingPiggy } = await stopSession(
-        user.uid,
-        dailyStats.currentSessionId,
-        dailyStats.activeClockInAt,
-        hourlyRate,
-        dailyStats.pendingPiggyBank
-      );
+      setActionLoading('Clocking out...');
+      try {
+        const uncollectedSessionEarnings = sessionPendingPiggy;
+        const { updatedPendingPiggy } = await stopSession(
+          user.uid,
+          dailyStats.currentSessionId,
+          dailyStats.activeClockInAt,
+          hourlyRate,
+          uncollectedSessionEarnings
+        );
 
-      setDailyStats(prev => ({
-        ...prev,
-        totalSecondsWorked: prev.totalSecondsWorked + sessionSeconds,
-        pendingPiggyBank: updatedPendingPiggy,
-        activeClockInAt: null,
-        currentSessionId: null
-      }));
-      setSessionSeconds(0);
-      setSessionPendingPiggy(0);
+        setDailyStats(prev => ({
+          ...prev,
+          totalSecondsWorked: prev.totalSecondsWorked + sessionSeconds,
+          pendingPiggyBank: updatedPendingPiggy,
+          activeClockInAt: null,
+          lastCollectedAt: null,
+          currentSessionId: null
+        }));
+        setSessionSeconds(0);
+        setSessionPendingPiggy(0);
+      } catch (err) {
+        console.error('Error clocking out:', err);
+      } finally {
+        setActionLoading(null);
+      }
     }
   };
 
   // Collect Piggy Bank Money
   const handleCollect = async () => {
-    if (!user || totalPendingPiggy <= 0) return;
+    if (!user || totalPendingPiggy <= 0 || actionLoading) return;
 
     const amountToCollect = totalPendingPiggy;
+    setActionLoading('Collecting money...');
 
-    if (isClockedIn) {
-      const now = Date.now();
-      setDailyStats(prev => ({
-        ...prev,
-        activeClockInAt: now,
-        collectedEarnings: prev.collectedEarnings + amountToCollect,
-        pendingPiggyBank: 0
-      }));
-      setSessionPendingPiggy(0);
-    } else {
-      const { newCollected } = await collectPiggyBank(user.uid, amountToCollect);
+    try {
+      const { newCollected, newPending, lastCollectedAt } = await collectPiggyBank(user.uid, amountToCollect, isClockedIn);
       setDailyStats(prev => ({
         ...prev,
         collectedEarnings: newCollected,
-        pendingPiggyBank: 0
+        pendingPiggyBank: newPending,
+        ...(isClockedIn && lastCollectedAt ? { lastCollectedAt } : {})
       }));
+      setSessionPendingPiggy(0);
+    } catch (err) {
+      console.error('Error collecting piggy bank:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -168,16 +218,22 @@ export const MainScreen = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-pink-500 selection:text-white">
-      {/* Background ambient lighting */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[450px] h-[350px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+      {/* Syncing / Action Overlay Popup */}
+      {actionLoading && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin mb-3"></div>
+          <p className="text-sm font-bold text-white tracking-wide">{actionLoading}</p>
+          <p className="text-xs text-slate-400 mt-1">Please wait while server updates...</p>
+        </div>
+      )}
 
-      {/* App Mobile Container - pb-24 for clean mobile spacing */}
+      {/* App Mobile Container */}
       <div className="w-full max-w-md mx-auto flex-1 flex flex-col p-4 sm:p-6 pb-24 relative z-10">
         
         {/* Top Header Bar */}
         <header className="flex items-center justify-between py-2 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md glow-green">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md">
               <PiggyBank className="w-5 h-5" />
             </div>
             <div>
@@ -190,7 +246,7 @@ export const MainScreen = () => {
           <LuckyBlockModal />
         </header>
 
-        {/* Tab Router Content - Silky smooth lightweight opacity transition */}
+        {/* Tab Router Content */}
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
             <motion.main
@@ -226,7 +282,7 @@ export const MainScreen = () => {
 
                 {/* Worked Time Today */}
                 <div className="inline-flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-full border border-slate-800 text-xs font-mono text-slate-300 mt-2 shadow-inner">
-                  <Clock className={`w-3.5 h-3.5 ${isClockedIn ? 'text-emerald-400 animate-spin-slow' : 'text-slate-500'}`} />
+                  <Clock className={`w-3.5 h-3.5 ${isClockedIn ? 'text-emerald-400' : 'text-slate-500'}`} />
                   <span>Time Today: <strong className="text-white font-bold">{formatTime(totalWorkedSeconds)}</strong></span>
                 </div>
               </div>
@@ -241,6 +297,7 @@ export const MainScreen = () => {
               {/* Collect Button */}
               <CollectButton
                 onCollect={handleCollect}
+                disabled={Boolean(actionLoading)}
                 pendingAmount={totalPendingPiggy}
               />
 
@@ -249,6 +306,7 @@ export const MainScreen = () => {
                 <ClockButton
                   isClockedIn={isClockedIn}
                   onToggle={handleToggleClock}
+                  disabled={Boolean(actionLoading)}
                 />
               </div>
             </motion.main>
