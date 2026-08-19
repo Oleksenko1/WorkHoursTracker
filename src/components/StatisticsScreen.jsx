@@ -5,7 +5,7 @@ import { ManageDayModal } from './ManageDayModal';
 import { Calendar as CalendarIcon, TrendingUp, Clock, DollarSign, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export const StatisticsScreen = () => {
+export const StatisticsScreen = ({ onUpdate }) => {
   const { user, userProfile } = useAuth();
   const [statsData, setStatsData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -309,7 +309,10 @@ export const StatisticsScreen = () => {
             uid={user?.uid}
             dateKey={selectedDateKey}
             currentStats={selectedDayStats}
-            onUpdate={fetchStats}
+            onUpdate={() => {
+              fetchStats();
+              if (onUpdate) onUpdate();
+            }}
             hourlyRate={hourlyRate}
           />
         </div>

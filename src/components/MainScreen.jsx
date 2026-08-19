@@ -69,6 +69,13 @@ export const MainScreen = () => {
     loadStats();
   }, [user]);
 
+  // Sync stats when switching back to home tab
+  useEffect(() => {
+    if (activeTab === 'home') {
+      loadStats();
+    }
+  }, [activeTab]);
+
   // Tab switch & browser focus sync listener
   useEffect(() => {
     const handleSync = async () => {
@@ -339,7 +346,7 @@ export const MainScreen = () => {
             animate={{
               x: [coin.startX, coin.midX, coin.endX],
               y: [coin.startY, coin.midY, coin.endY],
-              scale: [0.6, 1.2, 0],
+              scale: [0.5, 1.35, 1.0, 0.25],
               rotate: [0, coin.rotateDeg, coin.rotateDeg * 1.5],
               opacity: 1
             }}
@@ -455,14 +462,14 @@ export const MainScreen = () => {
               transition={{ duration: 0.15 }}
               className="flex-1"
             >
-              <StatisticsScreen />
+              <StatisticsScreen onUpdate={loadStats} />
             </motion.main>
           )}
         </AnimatePresence>
       </div>
 
       {/* Bottom Mobile Navigation */}
-      <div className={actionLoading ? 'pointer-events-none opacity-80 select-none' : ''}>
+      <div className={`relative z-40 ${actionLoading ? 'pointer-events-none select-none' : ''}`}>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
     </div>

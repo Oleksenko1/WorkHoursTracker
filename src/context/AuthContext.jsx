@@ -96,9 +96,24 @@ export const AuthProvider = ({ children }) => {
     logOut: handleLogOut
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 text-slate-100">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/20 animate-pulse">
+            <span className="text-3xl">🐖</span>
+          </div>
+          <div className="w-8 h-8 rounded-full border-3 border-emerald-500/20 border-t-emerald-500 animate-spin my-1"></div>
+          <h2 className="text-base font-extrabold text-white tracking-tight">JobTracker</h2>
+          <p className="text-xs text-slate-400 font-medium">Loading application...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
